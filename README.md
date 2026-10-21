@@ -15,6 +15,7 @@ The app should complete check-in without routine manual interaction when support
 | Area | Planned behavior |
 | --- | --- |
 | Airlines | Southwest Airlines and American Airlines |
+| Departure airports (initial scope) | Dallas Fort Worth (DFW), Dallas Love Field (DAL), Sacramento International (SMF) |
 | Interface | Python command-line interface (CLI) |
 | Reservation entry | Manual; no email integration |
 | Passengers | Individual travelers and multiple travelers sharing a reservation |
@@ -26,9 +27,26 @@ The app should complete check-in without routine manual interaction when support
 | Boarding passes | Download available boarding passes locally after successful check-in, with a separate file for each passenger |
 | Notifications | None; record outcomes in local logs only |
 
+## Initial airport support
+
+The initial project scope covers flights **departing** from the following airports. All three are targets for development, not confirmed working integrations.
+
+| Airport | IATA airport code | IANA time zone |
+| --- | --- | --- |
+| Dallas Fort Worth International Airport | `DFW` | `America/Chicago` |
+| Dallas Love Field | `DAL` | `America/Chicago` |
+| Sacramento International Airport | `SMF` | `America/Los_Angeles` |
+
+**Dallas Love Field code clarification:** The airport code is `DAL`, not `LUV`. `LUV` is associated with Southwest Airlines as its stock ticker and is also a distinct IATA airport code elsewhere. Reservation data and scheduling should use `DAL` for Dallas Love Field.
+
+- The initial version should validate departure airport codes against this list and provide a clear error for unsupported airports.
+- The scheduled check-in trigger must use the selected **departure airport's** time zone, regardless of the time zone on the Linux host.
+- Handle daylight-saving transitions with named IANA time zones rather than fixed UTC offsets.
+- Airports beyond these three can be added later without changing the core check-in scheduling logic.
+
 ## Intended workflow
 
-1. **Enter flight details manually** using the CLI. Include the airline, reservation confirmation, passenger details, scheduled departure, and departure airport.
+1. **Enter flight details manually** using the CLI. Include the airline, reservation confirmation, passenger details, scheduled departure, and a supported departure airport (`DFW`, `DAL`, or `SMF`).
 2. **Calculate check-in time** from scheduled departure minus 24 hours, converting correctly between the departure airport's local time and the Linux host's time.
 3. **Schedule a job** using cron or a systemd timer to start at the check-in time.
 4. **Attempt check-in** using the appropriate airline-specific workflow. Handle multiple passengers on the same reservation and track each passenger's status.
@@ -67,7 +85,8 @@ The app should complete check-in without routine manual interaction when support
 ## Planned milestones
 
 - [ ] Design secure reservation storage and CLI commands.
-- [ ] Implement time-zone-aware check-in scheduling.
+- [ ] Implement departure-airport validation for `DFW`, `DAL`, and `SMF`.
+- [ ] Implement time-zone-aware check-in scheduling for `America/Chicago` and `America/Los_Angeles`.
 - [ ] Integrate Linux cron or systemd.
 - [ ] Research and implement supported airline-specific check-in flows.
 - [ ] Implement per-passenger result tracking and bounded 30-second retries.
