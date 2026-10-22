@@ -1,54 +1,100 @@
 # flight-checkin
 
-A small Python CLI utility that opens an airline's website and attempts to check in a reservation automatically **24 hours before scheduled departure**.
+A small Python CLI utility that uses Playwright to open an airline's website, fill out the online check-in form, and attempt check-in **24 hours before scheduled departure**.
 
-> **Status: Planned.** The automation is not implemented or verified yet.
+> **Status: Planned, not implemented.** The airline entry-form details below were reviewed on October 22, 2026. Airline sites can change. The forms were inspected using publicly accessible page content, **not** by submitting a real reservation or completing check-in.
 
-## Scope
+## Supported websites and entry fields
 
-**Keep it simple:** use [Playwright](https://playwright.dev/python/) to automate the same check-in form a passenger would use on the airline website. Support:
+### Southwest Airlines
 
-- **Airlines:** Southwest Airlines and American Airlines.
-- **Input:** airline, confirmation number, passenger last name, and scheduled departure time (with time zone).
-- **Timing:** launch at departure minus 24 hours, using a one-time Linux **systemd timer**. Also allow manually running the command for testing or retrying.
-- **Action:** open the airline's official check-in page, fill the form, follow the normal check-in steps, and submit when eligible.
-- **Output:** log whether check-in was confirmed, failed, or requires a person to finish it. Save a boarding pass locally if it is directly available as part of a successful check-in.
-- **Runtime:** Python on a headless Linux server, managed over SSH.
+**Entry URL:** https://www.southwest.com/air/check-in/
 
-DFW, DAL (Dallas Love Field), and SMF are the initial airports of interest, **not restrictions on where a flight can depart or arrive**. The departure time must include the correct time zone. For connections or round trips, process each scheduled check-in journey independently; follow the airline's actual eligibility rules.
+The public check-in form explicitly marks these three fields **required**:
 
-## How it should work
+| Field displayed | CLI data | Notes |
+| --- | --- | --- |
+| Confirmation # | `confirmation_number` | Reservation confirmation number |
+| First Name | `first_name` | Passenger's first name as booked |
+| Last Name | `last_name` | Passenger's last name as booked |
 
-1. The user supplies the airline, confirmation number, last name, and departure date/time.
-2. A simple systemd timer starts the Python script at the calculated check-in time. The script can also be started manually.
-3. Playwright opens the airline check-in page in headless Chromium.
-4. The script fills in the reservation details and uses the airline's normal check-in workflow.
-5. It verifies the website's response before reporting success. If available, it saves a directly downloadable boarding pass.
-6. It logs the outcome locally and exits.
+**Entry action:** `Check in`.
 
-The app should make a best-effort attempt at the opening of the 24-hour window. Exact execution and success at that instant cannot be guaranteed due to OS scheduling, network latency, and airline availability.
+**Source:** [Southwest check-in form](https://www.southwest.com/air/check-in/index.html?validate=true).
 
-## Failures and limits
+### American Airlines
 
-- Optionally retry **temporary** errors every 30 seconds for up to 10 minutes, but verify the reservation's state before repeating any submission whose outcome is unknown.
-- If check-in requires a CAPTCHA, identity/document verification, account login, payment, or other human-only action, stop and log `manual_action_required`. **Never bypass security checks or make purchases.**
-- Do not change existing seat assignments or purchase seats/upgrades. If the flow cannot proceed without a seat decision, record that manual action is needed.
-- The two airline sites may have different steps and can change at any time. Build a small, separate Playwright flow for each carrier. Use browser automation only where allowed.
-- Confirmation number plus last name might not be sufficient for every reservation. Fully unattended check-in is a goal, not a guarantee.
-- No notifications: inspect local logs or `journalctl` for results.
+**Entry URL:** https://www.aa.com/reservation/flightCheckInViewReservationsAccess.do
 
-## Minimal implementation
+This URL leads to American's **Find your trip** / reservation lookup flow. Publicly available page content shows:
 
-- Python and Playwright for browser navigation and form entry.
-- A small CLI to accept reservation details and trigger a check-in run.
-- One-time systemd timer/unit for scheduled execution; no constantly running service.
-- Local configuration only if needed for a scheduled run. Restrict permissions and never commit real passenger data or booking codes.
-- Plain local logs without confirmation numbers or sensitive passenger details.
+| Field or option displayed | CLI data | Notes |
+| --- | --- | --- |
+| Last name | `last_name` | American instructs passengers to omit special characters such as hyphens; spaces in multiple last names are allowed |
+| Confirmation code | `confirmation_number` | Main lookup method for this app; American describes a six-letter record locator |
+| Date of birth (for your security) | `date_of_birth` | Security field shown on the page. Whether it is required for every reservation **has not been verified**; prompt for it only if needed |
+| Ticket number | Not used in initial version | Alternative lookup identifier shown on the page; not required when using the confirmation-code path |
 
-**Not part of the initial app:** SQLite, encrypted credential vaults, backups, automatic reservation refresh, complex itinerary management, rebooking, seat optimization, passenger-age logic, ongoing boarding-pass polling, dashboards, email, SMS, or push notifications. These should not be built unless a concrete need arises.
+**Entry action:** `Find your trip`, followed by check-in steps on subsequent pages. **First name is not shown as an entry field** on the publicly accessible initial lookup content.
+
+The direct American Airlines URL can return a JavaScript/session error to noninteractive page readers. These labels are corroborated by [American's current Find your trip page](https://www.aa.com/manage-reservation/viewres/ui/app/). Exact visible input state, required-field validation, page selectors, and subsequent check-in steps must be tested in a real browser.
+
+**Sources:** [American check-in URL](https://www.aa.com/reservation/flightCheckInViewReservationsAccess.do) and [American reservation lookup](https://www.aa.com/manage-reservation/viewres/ui/app/).
+
+### Shared input versus website fields
+
+The CLI needs **airline**, **confirmation number**, **last name**, and **scheduled departure date/time with a time zone**.
+
+- For **Southwest**, also require `first_name`.
+- For **American**, collect `date_of_birth` only when its lookup/security step actually requires it; do not assume it is universally mandatory.
+- **Departure date/time and time zone are scheduler inputs**, not fields verified on either airline's initial web form.
+- Additional prompts after reservation lookup (such as passenger selection or document checks) have **not** been verified. Handle only those actually encountered; never assume an unattended check-in always succeeds.
+
+## Should each airline have its own YAML file?
+
+**Yes: use one small YAML configuration file per airline**, with the website URL, input-field definitions, and human-readable labels. This keeps airline differences explicit and avoids a large generic configuration system.
+
+Proposed lightweight layout (not created yet):
+
+```text
+flight-checkin/
+  README.md
+  checkin.py                 # Small shared CLI and scheduling entry point
+  airlines/
+    southwest.yaml           # Southwest URL and entry-form field mapping
+    american.yaml            # American URL and entry-form field mapping
+    southwest.py             # Southwest-specific Playwright steps
+    american.py              # American-specific Playwright steps
+```
+
+The YAML files should describe **what** inputs are needed, not contain live passenger details, confirmation numbers, passwords, or birth dates. Store only verified field labels and selectors; **do not invent CSS selectors** in advance. Playwright logic, page transitions, error recognition, and success verification belong in the small airline-specific Python modules. Prefer robust semantic locators (labels, accessible roles) over brittle positional selectors.
+
+Avoid a YAML-only workflow engine: the two sites have different multi-step behavior, and trying to encode that behavior in configuration would make this small application unnecessarily complex.
+
+## Minimal behavior
+
+1. Supply the airline and reservation details through the CLI.
+2. For a scheduled job, supply the **scheduled departure timestamp with an explicit time zone**. Schedule a one-time **systemd timer** for exactly 24 hours before departure. Allow a direct manual run for development/testing.
+3. Launch headless Chromium with Playwright and navigate to the corresponding official airline check-in page.
+4. Fill the **verified initial entry fields** described above, then follow the site's ordinary check-in flow.
+5. Check the airline's final response to determine whether check-in actually succeeded. If a boarding pass is directly available for download, save it locally.
+6. Log `success`, `failure`, or `manual_action_required` without exposing booking codes or personal information, then exit.
+
+Airports **DFW**, **DAL** (Dallas Love Field), and **SMF** are the initial airports of interest, **not a hard restriction**. Time zones must be applied correctly to scheduling. For connecting or round-trip reservations, use the airline's actual itinerary eligibility rather than assuming every segment is checked in separately.
+
+The script targets a headless Linux server accessed through SSH. The timer attempts to start at the 24-hour mark; successful check-in at that exact instant is not guaranteed because of scheduling delays, network conditions, and airline availability.
+
+## Failures and safety
+
+- Retry *temporary, safe-to-retry* problems every **30 seconds for up to 10 minutes**. Before retrying a submission with an unknown outcome, check whether it already succeeded.
+- On a CAPTCHA, identity/document verification, unexpected required payment, or other human-only step, stop and log `manual_action_required`. Do not bypass airline security controls or make purchases.
+- Keep existing seats unchanged. Do not buy seats or upgrades. If the site requires an unsupported seat decision, report manual intervention.
+- Check-ins must use permitted website interactions; browser automation feasibility and applicable airline restrictions need validation.
+- No notifications; read local logs or `journalctl`.
+- Treat confirmation numbers, names, and dates of birth as sensitive. Never commit actual reservations, and avoid putting them in command-line arguments or logs where other local users could inspect them. Prefer restricted input files or interactive input for secrets in the initial version.
 
 ## First milestone
 
-Create and test **one manually triggered check-in flow for one airline** using a testable/eligible reservation, then add the second airline. Once the website interactions work reliably, add the simple systemd timer so the same command runs at the 24-hour mark.
+Build and test **one manual check-in run for Southwest** using its three clearly required entry fields, then add the American reservation lookup flow, including its potential date-of-birth prompt. Once both are validated with real browser sessions and permitted interactions, wire up the one-time systemd timer.
 
-Actual airline check-in behavior and permission to automate it must be validated before treating the app as dependable.
+**Not in this initial version:** SQLite, elaborate credential vaults, automatic reservation refresh, rebooking management, detailed seat optimization, dashboards, or notification services.
