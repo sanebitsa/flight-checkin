@@ -11,6 +11,10 @@
 - Keep confirmation codes, passenger details, and boarding passes out of commits, CLI arguments, logs, traces, and screenshots. Use private prompts or restricted files.
 - Mark check-in `success` only on airline confirmation. Keep boarding-pass availability separate, and stop safely for uncertain submissions or human-only steps.
 
+## Branch and PR requirements
+- Each implementing agent must work on a dedicated branch for its assigned task or vertical slice; never commit directly to `main`. Do not share working branches between concurrent agents; prefer separate Git worktrees.
+- After implementation and local validation, open a PR against `main` **before** requesting independent review. Keep the PR unmerged until an independent reviewer approves and required checks pass. See `docs/DEVELOPMENT.md` for the workflow.
+
 ## Non-negotiable quality gates
 - **TDD:** For every behavior change or bug fix, demonstrate red → green → refactor with synthetic fixtures, then run relevant tests. Never claim unrun or live-site tests passed.
 - **Before merging:** Obtain approval from an independent reviewer, resolve blockers, and pass relevant tests/checks. Never self-approve or merge without review.

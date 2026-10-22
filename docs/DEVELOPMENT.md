@@ -8,6 +8,14 @@ Use this guide with [the PRD](PRD.md), [the Kanban backlog](KANBAN.md), and the 
 2. Treat **AFK** as implementable with local, synthetic evidence; treat **HUMAN** as requiring the specified decision, permission, real-reservation validation, or host access. Do not invent or silently waive human evidence.
 3. Keep the change focused. Update docs, tests, and backlog evidence when behavior or status changes.
 
+## Branch isolation and pull requests
+
+1. Create a fresh branch from the current `main` for each implementing agent's assigned task or reviewable vertical slice (for example, `task/FC-001-southwest-cli`). **Never implement or commit directly on `main`.** Use a new branch for the next task, even when the same agent continues working.
+2. Concurrent implementing agents must use distinct branches and must not modify the same working tree. Prefer separate Git worktrees to isolate changes. Coordinate any overlapping files or dependencies rather than sharing a branch.
+3. Complete the slice using TDD and local validation, then push the task branch and open a PR targeting `main`. Include the Kanban card, concise scope, acceptance evidence, commands/results for relevant checks, and outstanding HUMAN gates. A PR is the review surface; **open it before independent review**.
+4. Request review from a person or agent who did not implement the change. Incorporate feedback on the same task branch, rerun relevant tests, and request re-review when needed. Merge only after independent approval, resolved blockers, and passing required checks. If review is unavailable, leave the PR open and unmerged.
+5. Verify the merged result on `main` as described below. Do not reuse the previous task's branch for further implementation.
+
 ## Required test-driven development
 
 For every behavior change or bug fix:
@@ -29,7 +37,7 @@ Record the failing-test evidence, passing-test evidence, and commands used in th
 
 ## Review and merge lifecycle
 
-**Before every merge:** Open a reviewable PR with scope, related card(s), sanitized test evidence, and known blockers. Obtain a decision from a person or agent **other than the implementer**. Review scope and acceptance criteria, correctness, privacy/security, TDD evidence, and regressions. Resolve blocking findings, then require independent approval and passing relevant tests/available CI checks. If no independent reviewer is available, leave the PR unmerged.
+**Before every merge:** Confirm the PR comes from a dedicated implementation branch, targets `main`, and contains scope, related card(s), sanitized test evidence, and known blockers. Obtain a decision on the PR from a person or agent **other than the implementer**. Review scope and acceptance criteria, correctness, privacy/security, TDD evidence, and regressions. Resolve blocking findings, then require independent approval and passing relevant tests/available CI checks. If no independent reviewer is available, leave the PR unmerged.
 
 **After every merge:** Verify the actual integrated `main` branch with applicable integration and regression tests. Record the commit, checks, result, and unresolved issues without sensitive data. Fix or revert failures before continuing.
 
