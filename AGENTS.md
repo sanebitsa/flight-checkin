@@ -17,6 +17,12 @@
 - After local validation, open a PR **into `development`** before requesting independent review. Merge into `development` only after independent approval and required checks; follow `docs/DEVELOPMENT.md`.
 - **`main` is human-controlled:** agents must never push or merge into `main`. Only a human may approve and perform the final merge from `development` into `main`.
 
+## Secrets and credential safety
+- Never commit passwords, API keys, tokens, private keys, session cookies, local credentials, reservation data, or boarding passes. This includes code, tests, fixtures, docs, logs, screenshots, and Playwright traces.
+- Keep real secrets in an approved secret store, environment variables, or permission-restricted local files, never in source control. Commit only obviously fake placeholders in examples.
+- Check staged changes for secrets before committing. The `secret-scan` CI check must pass before merging a PR into `development`; do not bypass a detection without a documented, independently reviewed false-positive decision.
+- If exposure is suspected, stop and report privately; revoke/rotate affected credentials promptly and coordinate secure history remediation. Removing a secret in a later commit does not remove it from Git history. Follow `docs/DEVELOPMENT.md`.
+
 ## Non-negotiable quality gates
 - **TDD:** For every behavior change or bug fix, demonstrate red → green → refactor with synthetic fixtures, then run relevant tests. Never claim unrun or live-site tests passed.
 - **Before merging:** Obtain approval from an independent reviewer, resolve blockers, and pass relevant tests/checks. Never self-approve or merge without review.
