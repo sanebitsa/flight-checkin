@@ -3,6 +3,7 @@
 ## Start here
 - Read `README.md` for the project overview, `docs/PRD.md` for requirements and exclusions, and `docs/KANBAN.md` for dependency-ordered work and **AFK/HUMAN** gates.
 - Follow `docs/DEVELOPMENT.md` for TDD, review, and merge procedures.
+- When coordinating multiple tasks or agents, follow `.agents/skills/development-coordinator/SKILL.md`.
 
 ## Build a small, safe CLI
 - Implement small, testable **vertical slices**: Southwest manual check-in first, then American Airlines, then one-time systemd scheduling.
