@@ -1,0 +1,5 @@
+# Quality tools for the planning-stage repository.
+# Add runtime and test dependencies with the first implementation slice.
+ruff>=0.14,<1
+pyright>=1.1,<2
+pytest>=8,<10

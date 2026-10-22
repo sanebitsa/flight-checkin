@@ -1,0 +1,58 @@
+name: Python CI
+
+on:
+  push:
+  pull_request:
+    branches:
+      - development
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-ci:
+    name: python-ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install CI dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Ruff lint
+        run: ruff check --output-format=github .
+
+      - name: Ruff format
+        run: ruff format --check .
+
+      - name: Pyright
+        run: pyright
+
+      - name: Pytest
+        shell: bash
+        run: |
+          if [[ -d tests ]] && find tests -type f \( -name 'test_*.py' -o -name '*_test.py' \) -print -quit | grep -q .; then
+            python -m pytest -q
+          elif [[ -f checkin.py || -d airlines ]]; then
+            echo "::error title=Missing tests::Application code exists but no tests were found under tests/."
+            exit 1
+          else
+            echo "::notice title=Tests not implemented::No application code or tests yet; Pytest skipped until FC-001."
+          fi

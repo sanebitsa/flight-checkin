@@ -1,0 +1,19 @@
+# Tool configuration only; project packaging and runtime dependencies are
+# introduced with the first application vertical slice (FC-001).
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["."]
+exclude = [".venv", "build", "dist", "**/__pycache__"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers"]

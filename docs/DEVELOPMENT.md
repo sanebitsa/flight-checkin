@@ -46,3 +46,20 @@ Record the failing-test evidence, passing-test evidence, and commands used in th
 **At each major milestone:** Request an independent integrated review for Southwest, American, scheduling, and first release. Evaluate the relevant Kanban acceptance criteria and PRD, document a pass/no-go decision and gaps, and do not declare completion while required evidence is missing. Independent agent review **does not substitute for HUMAN** acceptance of live check-ins, target-host installation, or release. A completed milestone on `development` is not permission for an agent to merge into `main`.
 
 Use the [independent-review skill](../.agents/skills/independent-review/SKILL.md) when delegating a review. Log decisions in the PR or Kanban card. These instructions are process rules, not technical enforcement; enable branch protection and required CI checks when supported.
+
+## GitHub Actions CI
+
+The read-only [Python CI workflow](../.github/workflows/ci.yml) runs on **every branch push**, on pull requests targeting `development` or `main`, and on manual dispatch. It uses Python 3.12 on GitHub-hosted Ubuntu and reports a single required-check job named `python-ci`:
+
+1. `ruff check --output-format=github .` for lint violations.
+2. `ruff format --check .` for formatting.
+3. `pyright` for static typing.
+4. `python -m pytest -q` when tests exist.
+
+Install the local CI tools with `python -m pip install -r requirements-dev.txt`. Tool settings live in `pyproject.toml`. The first implementation slice (FC-001) must add runtime/test dependencies to this setup and place synthetic tests under `tests/`; CI must not depend on real airline accounts, reservations, site check-ins, or secrets.
+
+**Planning-only exception:** Before application code or tests exist, the Pytest step emits an explicit GitHub Actions notice and skips execution. Once `checkin.py` or `airlines/` exists, missing tests **fail** the job. A green infrastructure-only run does not mean product behavior has been tested.
+
+For each implementation PR, report the exact commit SHA, `python-ci` Actions run link, and local red/green TDD evidence. Passing CI is necessary but **not a substitute for independent review** or HUMAN acceptance gates.
+
+**Repository settings (HUMAN):** After the first successful run, configure an active branch ruleset for `development` requiring a PR, the `python-ci` check, at least one independent approval, and blocking force-pushes and deletion. Protect `main` separately with human-controlled merges. These protections cannot be installed by committing workflow files. Their availability depends on the GitHub plan and repository visibility.
