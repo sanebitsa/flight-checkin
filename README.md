@@ -1,106 +1,54 @@
 # flight-checkin
 
-A Python command-line project to automatically check passengers in for Southwest Airlines and American Airlines when online check-in opens.
+A small Python CLI utility that opens an airline's website and attempts to check in a reservation automatically **24 hours before scheduled departure**.
 
-> **Project status: Planning.** The behavior below is a specification, not functionality already implemented or tested.
+> **Status: Planned.** The automation is not implemented or verified yet.
 
-## Goal
+## Scope
 
-Start a check-in attempt **24 hours before each flight's scheduled departure time**. Compute this from the departure airport's local time zone, including daylight-saving changes.
+**Keep it simple:** use [Playwright](https://playwright.dev/python/) to automate the same check-in form a passenger would use on the airline website. Support:
 
-The app should complete check-in without routine manual interaction when supported by the airline. It must never claim success until check-in has actually been confirmed. Exact launch timing and successful check-in cannot be guaranteed because of operating-system scheduling, network delays, airline rules, and website availability.
+- **Airlines:** Southwest Airlines and American Airlines.
+- **Input:** airline, confirmation number, passenger last name, and scheduled departure time (with time zone).
+- **Timing:** launch at departure minus 24 hours, using a one-time Linux **systemd timer**. Also allow manually running the command for testing or retrying.
+- **Action:** open the airline's official check-in page, fill the form, follow the normal check-in steps, and submit when eligible.
+- **Output:** log whether check-in was confirmed, failed, or requires a person to finish it. Save a boarding pass locally if it is directly available as part of a successful check-in.
+- **Runtime:** Python on a headless Linux server, managed over SSH.
 
-## Requirements
+DFW, DAL (Dallas Love Field), and SMF are the initial airports of interest, **not restrictions on where a flight can depart or arrive**. The departure time must include the correct time zone. For connections or round trips, process each scheduled check-in journey independently; follow the airline's actual eligibility rules.
 
-| Area | Planned behavior |
-| --- | --- |
-| Airlines | Southwest Airlines and American Airlines |
-| Departure airports (initial scope) | Dallas Fort Worth (DFW), Dallas Love Field (DAL), Sacramento International (SMF) |
-| Interface | Python command-line interface (CLI) |
-| Reservation entry | Manual; no email integration |
-| Passengers | Individual travelers and multiple travelers sharing a reservation |
-| Check-in trigger | Scheduled departure minus 24 hours |
-| Scheduling | Linux cron or systemd; short-lived scheduled jobs rather than a continuously running service |
-| Check-in | Fully automated when airline workflows permit |
-| Failure handling | Retry transient, safe-to-retry errors every 30 seconds for up to 10 minutes |
-| Results | Track check-in outcome separately for every passenger, including partial successes |
-| Boarding passes | Download available boarding passes locally after successful check-in, with a separate file for each passenger |
-| Notifications | None; record outcomes in local logs only |
+## How it should work
 
-## Initial airport support
+1. The user supplies the airline, confirmation number, last name, and departure date/time.
+2. A simple systemd timer starts the Python script at the calculated check-in time. The script can also be started manually.
+3. Playwright opens the airline check-in page in headless Chromium.
+4. The script fills in the reservation details and uses the airline's normal check-in workflow.
+5. It verifies the website's response before reporting success. If available, it saves a directly downloadable boarding pass.
+6. It logs the outcome locally and exits.
 
-The initial project scope covers flights **departing** from the following airports. All three are targets for development, not confirmed working integrations.
+The app should make a best-effort attempt at the opening of the 24-hour window. Exact execution and success at that instant cannot be guaranteed due to OS scheduling, network latency, and airline availability.
 
-| Airport | IATA airport code | IANA time zone |
-| --- | --- | --- |
-| Dallas Fort Worth International Airport | `DFW` | `America/Chicago` |
-| Dallas Love Field | `DAL` | `America/Chicago` |
-| Sacramento International Airport | `SMF` | `America/Los_Angeles` |
+## Failures and limits
 
-**Dallas Love Field code clarification:** The airport code is `DAL`, not `LUV`. `LUV` is associated with Southwest Airlines as its stock ticker and is also a distinct IATA airport code elsewhere. Reservation data and scheduling should use `DAL` for Dallas Love Field.
+- Optionally retry **temporary** errors every 30 seconds for up to 10 minutes, but verify the reservation's state before repeating any submission whose outcome is unknown.
+- If check-in requires a CAPTCHA, identity/document verification, account login, payment, or other human-only action, stop and log `manual_action_required`. **Never bypass security checks or make purchases.**
+- Do not change existing seat assignments or purchase seats/upgrades. If the flow cannot proceed without a seat decision, record that manual action is needed.
+- The two airline sites may have different steps and can change at any time. Build a small, separate Playwright flow for each carrier. Use browser automation only where allowed.
+- Confirmation number plus last name might not be sufficient for every reservation. Fully unattended check-in is a goal, not a guarantee.
+- No notifications: inspect local logs or `journalctl` for results.
 
-- The initial version should validate departure airport codes against this list and provide a clear error for unsupported airports.
-- The scheduled check-in trigger must use the selected **departure airport's** time zone, regardless of the time zone on the Linux host.
-- Handle daylight-saving transitions with named IANA time zones rather than fixed UTC offsets.
-- Airports beyond these three can be added later without changing the core check-in scheduling logic.
+## Minimal implementation
 
-## Intended workflow
+- Python and Playwright for browser navigation and form entry.
+- A small CLI to accept reservation details and trigger a check-in run.
+- One-time systemd timer/unit for scheduled execution; no constantly running service.
+- Local configuration only if needed for a scheduled run. Restrict permissions and never commit real passenger data or booking codes.
+- Plain local logs without confirmation numbers or sensitive passenger details.
 
-1. **Enter flight details manually** using the CLI. Include the airline, reservation confirmation, passenger details, scheduled departure, and a supported departure airport (`DFW`, `DAL`, or `SMF`).
-2. **Calculate check-in time** from scheduled departure minus 24 hours, converting correctly between the departure airport's local time and the Linux host's time.
-3. **Schedule a job** using cron or a systemd timer to start at the check-in time.
-4. **Attempt check-in** using the appropriate airline-specific workflow. Handle multiple passengers on the same reservation and track each passenger's status.
-5. **Retry temporary failures** every 30 seconds for up to 10 minutes after the initial scheduled attempt. Stop immediately after verified success. When a previous submission may have succeeded, verify the state before submitting again.
-6. **Save boarding passes** for successfully checked-in passengers when the airline makes them available for retrieval.
-7. **Log outcomes locally** with timestamps, passenger-level status, and any errors. Exit after completing the attempt or exhausting eligible retries.
+**Not part of the initial app:** SQLite, encrypted credential vaults, backups, automatic reservation refresh, complex itinerary management, rebooking, seat optimization, passenger-age logic, ongoing boarding-pass polling, dashboards, email, SMS, or push notifications. These should not be built unless a concrete need arises.
 
-## Failure handling
+## First milestone
 
-- Differentiate confirmed success, failed check-in, and manual intervention required.
-- Retry only transient problems, such as connection failures or temporary airline-service outages.
-- Do not blindly resubmit if the outcome of a previous attempt is unknown.
-- Treat CAPTCHA, identity verification, and other required human actions as **manual intervention required**. Do not bypass security mechanisms.
-- Preserve each passenger's status when a shared reservation is only partially checked in.
-- Once the 10-minute retry window expires, record the final outcome and stop retrying.
-- Because notifications are excluded, users must review logs for unsuccessful or incomplete attempts.
+Create and test **one manually triggered check-in flow for one airline** using a testable/eligible reservation, then add the second airline. Once the website interactions work reliably, add the simple systemd timer so the same command runs at the 24-hour mark.
 
-## Security and local files
-
-- Treat traveler details, confirmation numbers, and boarding passes as sensitive information.
-- Do not log booking credentials, complete confirmation numbers, personal identifiers, tokens, or boarding-pass contents.
-- Use appropriately restricted local file permissions for reservations and boarding passes.
-- Exclude credentials, reservation records, logs, and downloaded boarding passes from version control.
-- Define secure storage, data retention, and cleanup policies before using real reservations.
-
-## Proposed components
-
-- **CLI:** Add, inspect, and manage reservations.
-- **Reservation storage:** Persist flight and passenger details securely.
-- **Scheduler integration:** Register, update, and remove cron or systemd jobs.
-- **Airline adapters:** Isolate Southwest and American check-in behavior.
-- **Check-in coordinator:** Manage attempts, passenger outcomes, safe retries, and completion checks.
-- **Boarding-pass storage:** Save available passes in configurable local directories.
-- **Logging:** Record operational events and error details without exposing sensitive data.
-
-## Planned milestones
-
-- [ ] Design secure reservation storage and CLI commands.
-- [ ] Implement departure-airport validation for `DFW`, `DAL`, and `SMF`.
-- [ ] Implement time-zone-aware check-in scheduling for `America/Chicago` and `America/Los_Angeles`.
-- [ ] Integrate Linux cron or systemd.
-- [ ] Research and implement supported airline-specific check-in flows.
-- [ ] Implement per-passenger result tracking and bounded 30-second retries.
-- [ ] Save available boarding passes locally.
-- [ ] Add privacy-conscious local logging.
-- [ ] Test scheduling, retry boundaries, partial failures, and manual-intervention cases.
-- [ ] Document installation, configuration, and operation.
-
-## Open decisions
-
-- Precise CLI syntax and reservation storage format.
-- Whether to standardize on cron, systemd, or support both.
-- Airline-specific access methods and any authentication or verification requirements.
-- Boarding-pass file formats and directory structure.
-- Handling modified departure times, cancellations, connecting flights, and rescheduled check-in jobs.
-
-**Scope note:** Fully unattended check-in and boarding-pass retrieval depend on the airlines' current supported workflows and must be validated individually. No ability to bypass airline security, authorization, or verification is assumed.
+Actual airline check-in behavior and permission to automate it must be validated before treating the app as dependable.
