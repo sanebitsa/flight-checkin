@@ -3,7 +3,7 @@
 **Status:** Proposed / not implemented  
 **Version:** 0.1  
 **Last updated:** 2026-10-22  
-**Source of truth:** This document is derived from the [original project README](../README.md). Website field observations are preliminary and require live-browser validation.
+**Document authority:** This is the canonical product requirements document, migrated from the initial README on October 22, 2026. Website field observations are preliminary and require live-browser validation.
 
 ## 1. Product summary
 
