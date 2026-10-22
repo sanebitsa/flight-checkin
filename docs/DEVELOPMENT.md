@@ -35,6 +35,17 @@ Record the failing-test evidence, passing-test evidence, and commands used in th
 - Check-in `success` requires an airline-confirmed final state; submitted forms and boarding-pass downloads do not prove success. Retry transient failures only within the PRD bounds, and reconcile uncertain submissions before resubmitting.
 - Live-flow validation and target-host systemd installation are **HUMAN** gates, not routine automated tests.
 
+## Secrets, local credentials, and scanning
+
+**Mandatory:** No real passwords, tokens, API keys, private keys, session cookies, reservation codes, passenger data, or boarding passes in tracked files or Git history. The rule also applies to tests, fixtures, examples, CI logs, screenshots, Playwright traces, and PR descriptions.
+
+- Prefer approved GitHub Actions secrets for CI and restricted local environment variables or files (mode `0600`) for development. Do not pass secrets on command lines; do not print them to logs or test output. Commit a clearly fake `.env.example` only if examples become necessary.
+- `.gitignore` is a defense-in-depth filter for local `.env` files, key material, reservation inputs, browser sessions, and generated artifacts. It does **not** protect already-tracked files or detect secrets in legitimate source files. Check `git status` and `git diff --cached` before every commit.
+- Install local staged-secret scanning once with `python -m pip install pre-commit` and `pre-commit install`; the repository's Gitleaks hook requires Go to install its tool environment. Run `pre-commit run gitleaks` on staged changes. Pre-commit hooks are advisory and can be skipped, so they never replace CI.
+- Every PR into `development` (and release PR into `main`) must have a passing `secret-scan` GitHub Actions job, in addition to `python-ci` when applicable. The [secret scan workflow](../.github/workflows/secret-scan.yml) runs Gitleaks on branch pushes and PRs with full Git history. Do not merge if a scan fails, is missing, or is inconclusive. Independent reviewers must verify the result and inspect potentially sensitive files manually.
+- For suspected exposure, **stop, do not paste the secret into an issue or PR**, notify the authorized human privately, revoke or rotate affected credentials promptly, and coordinate safe removal from tracked files and Git history. A follow-up deletion commit alone is insufficient: previous commits and forks may still expose the value. Treat reservation/identity data as sensitive even when it cannot be rotated; determine remediation with the owner. Resume only when the incident is contained and the relevant checks pass.
+- Gitleaks is not a guarantee against every secret format. Keep human review, least-privilege access, and GitHub secret scanning/push protection (when available) enabled as additional defenses.
+
 ## Review and merge lifecycle
 
 **Before each implementation merge:** Confirm the PR comes from a dedicated branch off `development`, targets `development`, and contains scope, related card(s), sanitized test evidence, and known blockers. Obtain a decision on the PR from a person or agent **other than the implementer**. Review scope and acceptance criteria, correctness, privacy/security, TDD evidence, and regressions. Resolve blocking findings, then require independent approval and passing relevant tests/available CI checks. If no independent reviewer is available, leave the PR unmerged.
@@ -62,4 +73,4 @@ Install the local CI tools with `python -m pip install -r requirements-dev.txt`.
 
 For each implementation PR, report the exact commit SHA, `python-ci` Actions run link, and local red/green TDD evidence. Passing CI is necessary but **not a substitute for independent review** or HUMAN acceptance gates.
 
-**Repository settings (HUMAN):** After the first successful run, configure an active branch ruleset for `development` requiring a PR, the `python-ci` check, at least one independent approval, and blocking force-pushes and deletion. Protect `main` separately with human-controlled merges. These protections cannot be installed by committing workflow files. Their availability depends on the GitHub plan and repository visibility.
+**Repository settings (HUMAN):** After the first successful runs, configure an active branch ruleset for `development` requiring a PR, the `python-ci` and `secret-scan` checks, at least one independent approval, and blocking force-pushes and deletion. Protect `main` separately with human-controlled merges and require `secret-scan` there as well. Also enable GitHub secret scanning and push protection where available. These settings are **not** enforced merely by committing workflows; they require human configuration and depend on the GitHub plan and repository visibility.

@@ -1,0 +1,44 @@
+# Secrets and local configuration. Keep templates with fake placeholders only.
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+**/credentials.json
+**/secrets.json
+**/service-account*.json
+**/id_rsa
+**/id_ed25519
+
+# Real reservations, boarding passes, and browser/session artifacts.
+reservations/
+boarding-passes/
+boarding_passes/
+.local/
+playwright-report/
+test-results/
+*.har
+*.trace.zip
+*.webm
+auth-state*.json
+storage-state*.json
+cookies*.json
+
+# Python / local tools.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
