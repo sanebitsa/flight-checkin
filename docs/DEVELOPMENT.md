@@ -10,11 +10,11 @@ Use this guide with [the PRD](PRD.md), [the Kanban backlog](KANBAN.md), and the 
 
 ## Branch isolation and pull requests
 
-1. Create a fresh branch from the current `main` for each implementing agent's assigned task or reviewable vertical slice (for example, `task/FC-001-southwest-cli`). **Never implement or commit directly on `main`.** Use a new branch for the next task, even when the same agent continues working.
+1. Create a fresh branch from the current `development` for each implementing agent's assigned task or reviewable vertical slice (for example, `task/FC-001-southwest-cli`). **Never implement or commit directly on `development` or `main`.** Use a new branch for the next task, even when the same agent continues working.
 2. Concurrent implementing agents must use distinct branches and must not modify the same working tree. Prefer separate Git worktrees to isolate changes. Coordinate any overlapping files or dependencies rather than sharing a branch.
-3. Complete the slice using TDD and local validation, then push the task branch and open a PR targeting `main`. Include the Kanban card, concise scope, acceptance evidence, commands/results for relevant checks, and outstanding HUMAN gates. A PR is the review surface; **open it before independent review**.
-4. Request review from a person or agent who did not implement the change. Incorporate feedback on the same task branch, rerun relevant tests, and request re-review when needed. Merge only after independent approval, resolved blockers, and passing required checks. If review is unavailable, leave the PR open and unmerged.
-5. Verify the merged result on `main` as described below. Do not reuse the previous task's branch for further implementation.
+3. Complete the slice using TDD and local validation, then push the task branch and open a PR targeting `development` (not `main`). Include the Kanban card, concise scope, acceptance evidence, commands/results for relevant checks, and outstanding HUMAN gates. A PR is the review surface; **open it before independent review**.
+4. Request review from a person or agent who did not implement the change. Incorporate feedback on the same task branch, rerun relevant tests, and request re-review when needed. Merge into `development` only after independent approval, resolved blockers, and passing required checks. If review is unavailable, leave the PR open and unmerged.
+5. Verify the integrated result on `development` as described below. Do not reuse the previous task's branch for further implementation.
 
 ## Required test-driven development
 
@@ -37,10 +37,12 @@ Record the failing-test evidence, passing-test evidence, and commands used in th
 
 ## Review and merge lifecycle
 
-**Before every merge:** Confirm the PR comes from a dedicated implementation branch, targets `main`, and contains scope, related card(s), sanitized test evidence, and known blockers. Obtain a decision on the PR from a person or agent **other than the implementer**. Review scope and acceptance criteria, correctness, privacy/security, TDD evidence, and regressions. Resolve blocking findings, then require independent approval and passing relevant tests/available CI checks. If no independent reviewer is available, leave the PR unmerged.
+**Before each implementation merge:** Confirm the PR comes from a dedicated branch off `development`, targets `development`, and contains scope, related card(s), sanitized test evidence, and known blockers. Obtain a decision on the PR from a person or agent **other than the implementer**. Review scope and acceptance criteria, correctness, privacy/security, TDD evidence, and regressions. Resolve blocking findings, then require independent approval and passing relevant tests/available CI checks. If no independent reviewer is available, leave the PR unmerged.
 
-**After every merge:** Verify the actual integrated `main` branch with applicable integration and regression tests. Record the commit, checks, result, and unresolved issues without sensitive data. Fix or revert failures before continuing.
+**After each implementation merge:** Verify the actual integrated `development` branch with applicable integration and regression tests. Record the commit, checks, result, and unresolved issues without sensitive data. Fix or revert failures before continuing.
 
-**At each major milestone:** Request an independent integrated review for Southwest, American, scheduling, and first release. Evaluate the relevant Kanban acceptance criteria and PRD, document a pass/no-go decision and gaps, and do not declare completion while required evidence is missing. Independent agent review **does not substitute for HUMAN** acceptance of live check-ins, target-host installation, or release.
+**Releasing to `main` (HUMAN only):** Agents may prepare a release PR from `development` into `main` and report validation evidence, but must **never push, merge, or approve release on behalf of a human**. Only a human may authorize and execute the final merge into `main`, after deciding whether release criteria are met. Do not automatically merge a release PR after reviews or CI pass. Verify the integrated `main` commit after the human merges and record the result.
+
+**At each major milestone:** Request an independent integrated review for Southwest, American, scheduling, and first release. Evaluate the relevant Kanban acceptance criteria and PRD, document a pass/no-go decision and gaps, and do not declare completion while required evidence is missing. Independent agent review **does not substitute for HUMAN** acceptance of live check-ins, target-host installation, or release. A completed milestone on `development` is not permission for an agent to merge into `main`.
 
 Use the [independent-review skill](../.agents/skills/independent-review/SKILL.md) when delegating a review. Log decisions in the PR or Kanban card. These instructions are process rules, not technical enforcement; enable branch protection and required CI checks when supported.
