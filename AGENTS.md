@@ -29,3 +29,12 @@ Build a **small Python CLI** that uses headless Playwright on a Linux server to 
 - Cover inputs, terminal outcomes, safety stops, retry boundaries, and log redaction. Add regression tests for bugs before fixing them.
 - Run the relevant tests after each change and before declaring a slice complete. If a test cannot run, document why and do not claim it passed.
 - Keep changes focused, update documentation when behavior changes, and report the red/green test evidence, what changed, and any remaining human-validation blockers.
+
+## Independent review and quality gates (required)
+
+- **Before every merge:** Request a review from a person or agent who did not implement the change. The author must not approve their own work. Review PRD alignment, correctness, security/privacy, and TDD and regression-test evidence.
+- Do not merge until the independent reviewer approves, blocking findings are resolved, and relevant tests and available CI checks pass. If an independent reviewer is unavailable, leave the change unmerged and flag the blocker.
+- **After every merge:** Verify the integrated `main` branch with relevant integration and regression tests. Investigate and fix or revert failures before proceeding; record results without sensitive data.
+- **At each major milestone** (Southwest, American, scheduling, and first release): Have an independent reviewer assess the integrated work against `docs/PRD.md` and the milestone acceptance criteria in `docs/KANBAN.md`. Record the decision, evidence, and remaining gaps; do not mark the milestone complete with unmet acceptance criteria.
+- Keep existing **HUMAN** gates for authorized live-airline validation, target-host systemd setup, and release approval. Independent agent review does not replace required human decisions.
+- Record review approvals and post-merge verification in the PR or backlog. Where supported, use GitHub branch protection and CI checks to enforce pre-merge gates; `AGENTS.md` alone is not enforcement.
