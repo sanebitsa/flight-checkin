@@ -6,7 +6,6 @@ Build a **small Python CLI** that uses headless Playwright on a Linux server to 
 
 - Read `README.md` for orientation and `docs/PRD.md` for authoritative requirements and exclusions.
 - Use `docs/KANBAN.md` for small, dependency-ordered tasks. Its cards are a proposed backlog, not evidence that code or GitHub issues exist.
-- The repository is currently **planning-only**. Do not describe unimplemented behavior as working.
 
 ## Implementation boundaries
 
@@ -23,8 +22,10 @@ Build a **small Python CLI** that uses headless Playwright on a Linux server to 
 - Retry only safe transient errors within the PRD's limits. Reconcile uncertain submissions before attempting them again.
 - Real-reservation testing, live airline-flow validation, and target-host systemd installation require the appropriate **HUMAN** gate. Never fabricate validation results.
 
-## Testing and handoff
+## Test-driven development (required)
 
-- Test each change with synthetic fixtures or simulated browser pages first; cover inputs, terminal outcomes, safety stops, retry boundaries, and log redaction.
-- Run relevant available tests before declaring a slice complete. If the test infrastructure or live validation does not exist, state the limitation rather than claiming a pass.
-- Keep changes focused, update documentation when behavior changes, and report what changed, what was tested, and what remains blocked by human validation.
+- Follow **red → green → refactor** for every behavior change or bug fix: write a focused, failing automated test first; run it to confirm the expected failure; implement the minimum code to pass; then refactor while keeping tests green.
+- Use synthetic reservations, local fixtures, and simulated Playwright pages for repeatable tests. Never depend on live airline websites or real passenger data to run the automated suite.
+- Cover inputs, terminal outcomes, safety stops, retry boundaries, and log redaction. Add regression tests for bugs before fixing them.
+- Run the relevant tests after each change and before declaring a slice complete. If a test cannot run, document why and do not claim it passed.
+- Keep changes focused, update documentation when behavior changes, and report the red/green test evidence, what changed, and any remaining human-validation blockers.
