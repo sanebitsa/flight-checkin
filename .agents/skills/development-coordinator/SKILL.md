@@ -24,7 +24,7 @@ Coordinate small, testable vertical slices without becoming a second project-man
 
 - Determine whether this runtime actually provides task/subagent creation and progress-inspection capabilities. If available, hand off work using those tools and record the resulting agent/task identifier.
 - If not available, **do not pretend to start agents or work in the background**. Produce ready-to-use assignments and report that dispatch is pending. Do not promise autonomous follow-up.
-- Include in every assignment: `FC-###` and objective, verified prerequisites, exact acceptance criteria, branch name and `development` base, owned file boundaries, TDD expectations, privacy/safety constraints, expected PR target (`development`), evidence to return, and any HUMAN blockers.
+- Include in every assignment: `FC-###` and objective, verified prerequisites, exact acceptance criteria, branch name and `development` base, owned file boundaries, TDD expectations, privacy/safety constraints, expected PR target (`development`), evidence to return, and any HUMAN blockers. Require hook installation and **passing local pre-commit and pre-push preflight before any commit or push**; GitHub API-based agents must run equivalent checks on an isolated local staged tree **before** remote writes, or stop.
 - A task is `assigned` only when a real agent accepts or a human explicitly takes ownership. Keep status claims tied to actual GitHub/agent evidence; never invent agents, commits, tests, or task results.
 
 ## 4. Review, integrate, and verify
